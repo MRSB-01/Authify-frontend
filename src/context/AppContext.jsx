@@ -12,14 +12,14 @@ const AppContextProvider = (props) => {
     const [userData, setUserData] = useState(false);
 
     const getUserData = async () => {
+        
     try {
-        const token = localStorage.getItem("token"); // <-- Get token from localStorage
-
         const response = await axios.get(`${backendURL}/me`, {
-            headers: {
-                Authorization: `Bearer ${token}`, // <-- Add token to headers
-            },
-        });
+  withCredentials: true,
+  headers: {
+    Authorization: `Bearer ${token}`,
+  },
+});
 
         if (response.status === 200 && response.data) {
             setUserData(response.data);
