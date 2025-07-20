@@ -28,6 +28,7 @@ const Login = () => {
           { name, email, password },
           { withCredentials: true } // ✅ Important for cookies
         );
+        navigate("/");
         toast.success("Account created successfully");
       } else {
         await axios.post(
@@ -35,6 +36,7 @@ const Login = () => {
           { email, password },
           { withCredentials: true } // ✅ Important for cookies
         );
+        navigate("/");
         toast.success("Login successful");
       }
 
