@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-//import axios from "../utils/axiosInstance"; // 👈 use custom axios instance
+import axios from "axios"; // ✅ Added axios import
 import { AppContext } from "../context/AppContext";
 
 const Login = () => {
@@ -22,15 +22,22 @@ const Login = () => {
 
     try {
       if (isCreateAccount) {
-        await axios.post("/register", { name, email, password });
+        await axios.post(
+          "/register",
+          { name, email, password },
+          { withCredentials: true } // ✅ Important for cookies
+        );
         toast.success("Account created successfully");
-        navigate("/");
       } else {
-        await axios.post("/login", { email, password });
+        await axios.post(
+          "/login",
+          { email, password },
+          { withCredentials: true } // ✅ Important for cookies
+        );
         toast.success("Login successful");
       }
 
-      await getUserData();
+      await getUserData(); // ✅ fetch profile using stored cookie
       setIsLoggedIn(true);
       navigate("/");
     } catch (error) {
@@ -45,7 +52,10 @@ const Login = () => {
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-white to-blue-200 px-4">
-      <div className="absolute top-6 left-6 flex items-center gap-2 cursor-pointer" onClick={() => navigate("/")}>
+      <div
+        className="absolute top-6 left-6 flex items-center gap-2 cursor-pointer"
+        onClick={() => navigate("/")}
+      >
         <img src="/logo.png" alt="Logo" width={32} height={32} />
         <span className="text-xl font-semibold text-black drop-shadow">Authify</span>
       </div>
