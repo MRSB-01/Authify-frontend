@@ -14,6 +14,7 @@ const AppContextProvider = (props) => {
     const getUserData = async () => {
         
     try {
+        const token = localStorage.getItem("token");
         const response = await axios.get(`${backendURL}/me`, {
   withCredentials: true,
   headers: {
