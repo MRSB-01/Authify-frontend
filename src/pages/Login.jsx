@@ -2,7 +2,7 @@ import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "../utils/axiosInstance"; // 👈 use custom axios instance
+//import axios from "../utils/axiosInstance"; // 👈 use custom axios instance
 import { AppContext } from "../context/AppContext";
 
 const Login = () => {
