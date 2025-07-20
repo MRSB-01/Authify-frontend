@@ -11,8 +11,7 @@ const AppContextProvider = (props) => {
   const [userData, setUserData] = useState(null); // Corrected: use null not false
 
   const getUserData = async () => {
-    const token = localStorage.getItem("token");
-
+    
     if (!token) {
       setUserData(null);
       setIsLoggedIn(false);
@@ -20,11 +19,7 @@ const AppContextProvider = (props) => {
     }
 
     try {
-      const response = await axios.get(`${backendURL}/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`, // Corrected: no withCredentials
-        },
-      });
+      const response = await axios.get(`${backendURL}/me`, { withCredentials: true });
 
       if (response.status === 200 && response.data) {
         setUserData(response.data);
