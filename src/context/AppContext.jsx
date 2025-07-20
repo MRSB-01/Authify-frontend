@@ -8,18 +8,13 @@ export const AppContext = createContext();
 const AppContextProvider = (props) => {
   const backendURL = AppConstant.BACKEND_URL;
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState(null); // Corrected: use null not false
+  const [userData, setUserData] = useState(null);
 
   const getUserData = async () => {
-    
-    if (!token) {
-      setUserData(null);
-      setIsLoggedIn(false);
-      return;
-    }
-
     try {
-      const response = await axios.get(`${backendURL}/me`, { withCredentials: true });
+      const response = await axios.get(`${backendURL}/me`, {
+        withCredentials: true, // used for cookie-based auth
+      });
 
       if (response.status === 200 && response.data) {
         setUserData(response.data);
