@@ -12,25 +12,30 @@ const AppContextProvider = (props) => {
     const [userData, setUserData] = useState(false);
 
     const getUserData = async () => {
-        try {
-            const response = await axios.get(`${backendURL}/me`, {
-                withCredentials: true,
-            });
+    try {
+        const token = localStorage.getItem("token"); // <-- Get token from localStorage
 
-            if (response.status === 200 && response.data) {
-                setUserData(response.data);
-                setIsLoggedIn(true);
-            } else {
-                setUserData(null);
-                setIsLoggedIn(false);
-                toast.error("Unable to retrieve profile.");
-            }
-        } catch (error) {
+        const response = await axios.get(`${backendURL}/me`, {
+            headers: {
+                Authorization: `Bearer ${token}`, // <-- Add token to headers
+            },
+        });
+
+        if (response.status === 200 && response.data) {
+            setUserData(response.data);
+            setIsLoggedIn(true);
+        } else {
             setUserData(null);
             setIsLoggedIn(false);
-            console.error(error);
+            toast.error("Unable to retrieve profile.");
         }
-    };
+    } catch (error) {
+        setUserData(null);
+        setIsLoggedIn(false);
+        console.error(error);
+    }
+};
+
 
 
     const contextValue = {
