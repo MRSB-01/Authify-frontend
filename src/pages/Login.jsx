@@ -2,8 +2,9 @@ import { useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios"; // ✅ Added axios import
 import { AppContext } from "../context/AppContext";
+import axios from "../utils/axiosInstance";
+
 
 const Login = () => {
   const [isCreateAccount, setIsCreateAccount] = useState(false);
