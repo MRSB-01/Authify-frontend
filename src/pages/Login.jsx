@@ -24,39 +24,38 @@ const Login = () => {
   }, [isLoggedIn, navigate]);
 
   const onSubmitHandler = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      const endpoint = isCreateAccount ? "/register" : "/login";
-      await axios.post(endpoint, {
-        name: isCreateAccount ? formData.name : undefined,
-        email: formData.email,
-        password: formData.password
-      });
+  try {
+    const endpoint = isCreateAccount ? "/register" : "/login";
+    const response = await axios.post(endpoint, {
+      name: isCreateAccount ? formData.name : undefined,
+      email: formData.email,
+      password: formData.password
+    });
 
-      // Verify authentication by getting user data
-      await getUserData();
-      toast.success(isCreateAccount ? "Account created successfully!" : "Login successful!");
-      
-      // Single navigation after all operations complete
+    // Verify authentication immediately after login
+    const userResponse = await axios.get("/me");
+    if (userResponse.data) {
+      setIsLoggedIn(true);
+      setUserData(userResponse.data);
+      localStorage.setItem("authState", JSON.stringify({
+        isLoggedIn: true,
+        userData: userResponse.data
+      }));
       navigate("/");
-    } catch (error) {
-      const defaultMessage = isCreateAccount 
-        ? "Registration failed. Please try again." 
-        : "Login failed. Please check your credentials.";
-      
-      toast.error(error?.response?.data?.message || defaultMessage);
-      
-      // Clear form on error for better UX
-      if (!isCreateAccount) {
-        setFormData(prev => ({ ...prev, password: "" }));
-      }
-    } finally {
-      setLoading(false);
+      toast.success(isCreateAccount ? "Account created!" : "Login successful!");
     }
-  };
-
+  } catch (error) {
+    // Clear auth state on error
+    localStorage.removeItem("authState");
+    toast.error(error.response?.data?.message || "Authentication failed");
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
