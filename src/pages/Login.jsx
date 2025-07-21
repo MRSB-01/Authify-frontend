@@ -31,6 +31,7 @@ const Login = () => {
         if (success) {
           setFormData({ name: '', email: '', password: '' });
           setIsCreateAccount(false);
+          toast.success('Registration successful! Please login.');
         }
       } else {
         const success = await login({
