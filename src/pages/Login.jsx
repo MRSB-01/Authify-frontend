@@ -1,68 +1,63 @@
-import { useState, useContext, useEffect } from "react";
-import { motion } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
-import { toast } from "react-toastify";
-import { AppContext } from "../context/AppContext";
-import axiosInstance from "../utils/axiosInstance";
+import { useState, useContext, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useNavigate, Link } from 'react-router-dom';
+import { toast } from 'react-toastify';
+import { AppContext } from '../context/AppContext';
 
 const Login = () => {
   const [isCreateAccount, setIsCreateAccount] = useState(false);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: ""
+    name: '',
+    email: '',
+    password: '',
   });
   const [loading, setLoading] = useState(false);
   const { isLoggedIn, authLoading, login, register } = useContext(AppContext);
 
-  // Redirect if already logged in
   useEffect(() => {
     if (isLoggedIn) {
-      navigate("/");
+      navigate('/');
     }
   }, [isLoggedIn, navigate]);
 
-  
   const onSubmitHandler = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    if (isCreateAccount) {
-      await register(formData);
-      // Clear form after successful registration
-      setFormData({ name: "", email: "", password: "" });
-      setIsCreateAccount(false);
-      toast.success("Registration successful! Please login");
-    } else {
-      const success = await login({
-        email: formData.email,
-        password: formData.password
-      });
-      if (success) {
-        navigate("/");
+    try {
+      if (isCreateAccount) {
+        const success = await register(formData);
+        if (success) {
+          setFormData({ name: '', email: '', password: '' });
+          setIsCreateAccount(false);
+        }
+      } else {
+        const success = await login({
+          email: formData.email,
+          password: formData.password,
+        });
+        if (success) {
+          navigate('/');
+        }
       }
+    } catch (error) {
+      console.error('Auth error:', error);
+      toast.error(
+        error.response?.data?.message ||
+          (isCreateAccount ? 'Registration failed' : 'Login failed')
+      );
+      setFormData((prev) => ({ ...prev, password: '' }));
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Auth error:", error);
-    toast.error(
-      error.response?.data?.message || 
-      (isCreateAccount ? "Registration failed" : "Login failed")
-    );
-    setFormData(prev => ({ ...prev, password: "" }));
-  } finally {
-    setLoading(false);
-  }
-};
-
-  
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Show loading state while checking initial auth
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -75,7 +70,7 @@ const Login = () => {
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-white to-blue-200 px-4">
       <div
         className="absolute top-6 left-6 flex items-center gap-2 cursor-pointer"
-        onClick={() => navigate("/")}
+        onClick={() => navigate('/')}
       >
         <img src="/logo.png" alt="Logo" width={32} height={32} />
         <span className="text-xl font-semibold text-black drop-shadow">Authify</span>
@@ -88,7 +83,7 @@ const Login = () => {
         transition={{ duration: 0.8 }}
       >
         <h2 className="text-3xl font-bold text-center text-blue-800 mb-6">
-          {isCreateAccount ? "Register" : "Login"}
+          {isCreateAccount ? 'Register' : 'Login'}
         </h2>
 
         <form onSubmit={onSubmitHandler} className="space-y-4">
@@ -137,10 +132,7 @@ const Login = () => {
 
           {!isCreateAccount && (
             <div>
-              <Link 
-                className="text-sm font-medium text-blue-700 hover:text-blue-900" 
-                to="/reset-password"
-              >
+              <Link className="text-sm font-medium text-blue-700 hover:text-blue-900" to="/reset-password">
                 Forgot password?
               </Link>
             </div>
@@ -163,20 +155,20 @@ const Login = () => {
                 </svg>
                 Processing...
               </>
-            ) : isCreateAccount ? "Create Account" : "Login"}
+            ) : isCreateAccount ? 'Create Account' : 'Login'}
           </motion.button>
         </form>
 
         <p className="text-center text-sm text-gray-600 mt-6">
-          {isCreateAccount ? "Already have an account?" : "Don't have an account?"}
+          {isCreateAccount ? 'Already have an account?' : "Don't have an account?"}
           <button
             onClick={() => {
-              setIsCreateAccount(prev => !prev);
-              setFormData({ name: "", email: "", password: "" });
+              setIsCreateAccount((prev) => !prev);
+              setFormData({ name: '', email: '', password: '' });
             }}
             className="ml-2 text-blue-600 hover:text-blue-800 font-medium cursor-pointer focus:outline-none underline"
           >
-            {isCreateAccount ? "Sign in instead" : "Create one now"}
+            {isCreateAccount ? 'Sign in instead' : 'Create one now'}
           </button>
         </p>
       </motion.div>
