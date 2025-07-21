@@ -22,6 +22,7 @@ instance.interceptors.request.use((config) => {
   if (jwtToken) {
     config.headers['Authorization'] = `Bearer ${jwtToken}`;
   }
+  console.log('Request Headers:', config.headers); // Debug
   return config;
 });
 
@@ -30,7 +31,7 @@ instance.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('authState');
-      localStorage.removeItem('jwtToken'); // Clear JWT on 401
+      localStorage.removeItem('jwtToken');
       if (!window.location.pathname.includes('/login')) {
         window.location.href = '/login';
       }
