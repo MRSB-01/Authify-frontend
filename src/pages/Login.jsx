@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { useNavigate, Link } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AppContext } from "../context/AppContext";
-import axios from "../utils/axiosInstance";
+import axiosInstance from "../utils/axiosInstance";
 
 const Login = () => {
   const [isCreateAccount, setIsCreateAccount] = useState(false);
@@ -14,7 +14,7 @@ const Login = () => {
     password: ""
   });
   const [loading, setLoading] = useState(false);
-  const { setIsLoggedIn, getUserData, isLoggedIn } = useContext(AppContext);
+  const { isLoggedIn, authLoading, login, register } = useContext(AppContext);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -24,42 +24,52 @@ const Login = () => {
   }, [isLoggedIn, navigate]);
 
   const onSubmitHandler = async (e) => {
-  e.preventDefault();
-  setLoading(true);
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const endpoint = isCreateAccount ? "/register" : "/login";
-    const response = await axios.post(endpoint, {
-      name: isCreateAccount ? formData.name : undefined,
-      email: formData.email,
-      password: formData.password
-    });
+    try {
+      let success;
+      if (isCreateAccount) {
+        success = await register({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        });
+      } else {
+        success = await login({
+          email: formData.email,
+          password: formData.password
+        });
+      }
 
-    // Verify authentication immediately after login
-    const userResponse = await axios.get("/me");
-    if (userResponse.data) {
-      setIsLoggedIn(true);
-      setUserData(userResponse.data);
-      localStorage.setItem("authState", JSON.stringify({
-        isLoggedIn: true,
-        userData: userResponse.data
-      }));
-      navigate("/");
-      toast.success(isCreateAccount ? "Account created!" : "Login successful!");
+      if (success) {
+        navigate("/");
+      } else {
+        // Clear password field on failure
+        setFormData(prev => ({ ...prev, password: "" }));
+      }
+    } catch (error) {
+      console.error("Authentication error:", error);
+      toast.error(error.message || "Authentication failed");
+      setFormData(prev => ({ ...prev, password: "" }));
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    // Clear auth state on error
-    localStorage.removeItem("authState");
-    toast.error(error.response?.data?.message || "Authentication failed");
-  } finally {
-    setLoading(false);
-  }
-};
-  
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+
+  // Show loading state while checking initial auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-white to-blue-200 px-4">
@@ -89,6 +99,7 @@ const Login = () => {
                 type="text"
                 name="name"
                 required
+                minLength={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={formData.name}
                 onChange={handleInputChange}
@@ -116,6 +127,7 @@ const Login = () => {
               type="password"
               name="password"
               required
+              minLength={6}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={formData.password}
               onChange={handleInputChange}
@@ -125,7 +137,10 @@ const Login = () => {
 
           {!isCreateAccount && (
             <div>
-              <Link className="text-sm font-medium text-blue-700" to={"/reset-password"}>
+              <Link 
+                className="text-sm font-medium text-blue-700 hover:text-blue-900" 
+                to="/reset-password"
+              >
                 Forgot password?
               </Link>
             </div>
@@ -133,30 +148,35 @@ const Login = () => {
 
           <motion.button
             disabled={loading}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
             type="submit"
-            className={`w-full ${loading ? 'bg-blue-400' : 'bg-blue-700'} text-white py-2 rounded-lg font-semibold transition-colors`}
+            className={`w-full flex items-center justify-center ${
+              loading ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'
+            } text-white py-3 rounded-lg font-semibold transition-colors shadow-md`}
           >
             {loading ? (
-              <span className="flex items-center justify-center">
+              <>
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Processing...
-              </span>
-            ) : isCreateAccount ? "Create account" : "Login"}
+              </>
+            ) : isCreateAccount ? "Create Account" : "Login"}
           </motion.button>
         </form>
 
-        <p className="text-center text-sm text-gray-700 mt-4">
+        <p className="text-center text-sm text-gray-600 mt-6">
           {isCreateAccount ? "Already have an account?" : "Don't have an account?"}
           <button
-            onClick={() => setIsCreateAccount(prev => !prev)}
-            className="text-blue-700 hover:underline font-medium ms-2 cursor-pointer focus:outline-none"
+            onClick={() => {
+              setIsCreateAccount(prev => !prev);
+              setFormData({ name: "", email: "", password: "" });
+            }}
+            className="ml-2 text-blue-600 hover:text-blue-800 font-medium cursor-pointer focus:outline-none underline"
           >
-            {isCreateAccount ? "Login" : "Sign up"}
+            {isCreateAccount ? "Sign in instead" : "Create one now"}
           </button>
         </p>
       </motion.div>
