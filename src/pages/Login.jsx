@@ -23,40 +23,40 @@ const Login = () => {
     }
   }, [isLoggedIn, navigate]);
 
+  
   const onSubmitHandler = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      let success;
-      if (isCreateAccount) {
-        success = await register({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        });
-      } else {
-        success = await login({
-          email: formData.email,
-          password: formData.password
-        });
-      }
-
+  try {
+    if (isCreateAccount) {
+      await register(formData);
+      // Clear form after successful registration
+      setFormData({ name: "", email: "", password: "" });
+      setIsCreateAccount(false);
+      toast.success("Registration successful! Please login");
+    } else {
+      const success = await login({
+        email: formData.email,
+        password: formData.password
+      });
       if (success) {
         navigate("/");
-      } else {
-        // Clear password field on failure
-        setFormData(prev => ({ ...prev, password: "" }));
       }
-    } catch (error) {
-      console.error("Authentication error:", error);
-      toast.error(error.message || "Authentication failed");
-      setFormData(prev => ({ ...prev, password: "" }));
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (error) {
+    console.error("Auth error:", error);
+    toast.error(
+      error.response?.data?.message || 
+      (isCreateAccount ? "Registration failed" : "Login failed")
+    );
+    setFormData(prev => ({ ...prev, password: "" }));
+  } finally {
+    setLoading(false);
+  }
+};
 
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
