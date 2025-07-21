@@ -1,109 +1,125 @@
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react'
-import axiosInstance from '../utils/axiosInstance'
-import { toast } from 'react-toastify'
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+import axiosInstance from '../utils/axiosInstance';
+import { toast } from 'react-toastify';
 
-// Add default implementations for all context functions
 export const AppContext = createContext({
   isLoggedIn: false,
   userData: null,
   authLoading: true,
-  checkAuth: () => Promise.resolve(false),
   login: () => Promise.resolve(false),
   register: () => Promise.resolve(false),
-  logout: () => Promise.resolve()
-})
+  logout: () => Promise.resolve(),
+  getUserData: () => Promise.resolve(), // Added to match App.jsx usage
+});
 
 const AppContextProvider = ({ children }) => {
   const [authState, setAuthState] = useState(() => {
-    const savedAuth = localStorage.getItem('authState')
-    return savedAuth ? JSON.parse(savedAuth) : { 
-      isLoggedIn: false, 
-      userData: null, 
-      isLoading: true 
-    }
-  })
+    const savedAuth = localStorage.getItem('authState');
+    return savedAuth
+      ? JSON.parse(savedAuth)
+      : { isLoggedIn: false, userData: null, isLoading: true };
+  });
 
   const checkAuth = useCallback(async () => {
     try {
-      setAuthState(prev => ({ ...prev, isLoading: true }))
-      const response = await axiosInstance.get('/me')
-      
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
+      const response = await axiosInstance.get('/me');
       if (response.data) {
         const newState = {
           isLoggedIn: true,
           userData: response.data,
-          isLoading: false
-        }
-        setAuthState(newState)
-        localStorage.setItem('authState', JSON.stringify(newState))
-        return true
+          isLoading: false,
+        };
+        setAuthState(newState);
+        localStorage.setItem('authState', JSON.stringify(newState));
+        return true;
       }
     } catch (error) {
       if (error.response?.status !== 401) {
-        console.error('Auth check error:', error)
-        toast.error('Session verification failed')
+        console.error('Auth check error:', error);
+        toast.error('Session verification failed');
       }
       const newState = {
         isLoggedIn: false,
         userData: null,
-        isLoading: false
-      }
-      setAuthState(newState)
-      localStorage.removeItem('authState')
+        isLoading: false,
+      };
+      setAuthState(newState);
+      localStorage.removeItem('authState');
     }
-    return false
-  }, [])
+    return false;
+  }, []);
 
   const login = useCallback(async (credentials) => {
     try {
-      await axiosInstance.post('/login', credentials)
-      const success = await checkAuth()
-      if (success) {
-        toast.success('Login successful')
-        return true
+      const response = await axiosInstance.post('/login', credentials);
+      if (response.status === 200) {
+        const success = await checkAuth();
+        if (success) {
+          toast.success('Login successful');
+          return true;
+        }
       }
     } catch (error) {
-      console.error('Login error:', error)
-      toast.error(error.response?.data?.message || 'Login failed')
+      console.error('Login error:', error);
+      toast.error(error.response?.data?.message || 'Login failed');
     }
-    return false
-  }, [checkAuth])
+    return false;
+  }, [checkAuth]);
+
+  const register = useCallback(async (credentials) => {
+    try {
+      const response = await axiosInstance.post('/register', credentials);
+      if (response.status === 200) {
+        toast.success('Registration successful! Please login');
+        return true;
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      toast.error(error.response?.data?.message || 'Registration failed');
+    }
+    return false;
+  }, []);
 
   const logout = useCallback(async () => {
     try {
-      await axiosInstance.post('/logout')
+      await axiosInstance.post('/logout');
+    } catch (error) {
+      console.error('Logout error:', error);
     } finally {
       setAuthState({
         isLoggedIn: false,
         userData: null,
-        isLoading: false
-      })
-      localStorage.removeItem('authState')
-      // Clear all cookies reliably
-      document.cookie.split(';').forEach(c => {
-        document.cookie = c.trim().split('=')[0] + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;'
-      })
+        isLoading: false,
+      });
+      localStorage.removeItem('authState');
+      document.cookie.split(';').forEach((c) => {
+        document.cookie = c
+          .trim()
+          .split('=')[0] + '=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/';
+      });
     }
-  }, [])
+  }, []);
+
+  const getUserData = useCallback(async () => {
+    await checkAuth(); // Reuse checkAuth to fetch user data
+  }, [checkAuth]);
 
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+    checkAuth();
+  }, [checkAuth]);
 
   const value = useMemo(() => ({
     isLoggedIn: authState.isLoggedIn,
     userData: authState.userData,
     authLoading: authState.isLoading,
     login,
+    register,
     logout,
-    checkAuth
-  }), [authState, login, logout, checkAuth])
+    getUserData, // Added to match App.jsx
+  }), [authState, login, register, logout, getUserData]);
 
-  return (
-    <AppContext.Provider value={value}>
-      {children}
-    </AppContext.Provider>
-  )
-}
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+};
 
-export default AppContextProvider
+export default AppContextProvider;
