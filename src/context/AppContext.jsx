@@ -9,7 +9,7 @@ export const AppContext = createContext({
   login: () => Promise.resolve(false),
   register: () => Promise.resolve(false),
   logout: () => Promise.resolve(),
-  getUserData: () => Promise.resolve(), // Added to match App.jsx usage
+  getUserData: () => Promise.resolve(),
 });
 
 const AppContextProvider = ({ children }) => {
@@ -54,6 +54,8 @@ const AppContextProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/login', credentials);
       if (response.status === 200) {
+        const { token } = response.data; // Assume backend returns { token: "..." }
+        localStorage.setItem('jwtToken', token); // Store JWT
         const success = await checkAuth();
         if (success) {
           toast.success('Login successful');
@@ -93,6 +95,7 @@ const AppContextProvider = ({ children }) => {
         isLoading: false,
       });
       localStorage.removeItem('authState');
+      localStorage.removeItem('jwtToken'); // Clear JWT
       document.cookie.split(';').forEach((c) => {
         document.cookie = c
           .trim()
@@ -102,7 +105,7 @@ const AppContextProvider = ({ children }) => {
   }, []);
 
   const getUserData = useCallback(async () => {
-    await checkAuth(); // Reuse checkAuth to fetch user data
+    await checkAuth();
   }, [checkAuth]);
 
   useEffect(() => {
@@ -116,7 +119,7 @@ const AppContextProvider = ({ children }) => {
     login,
     register,
     logout,
-    getUserData, // Added to match App.jsx
+    getUserData,
   }), [authState, login, register, logout, getUserData]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
