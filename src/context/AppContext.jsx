@@ -46,6 +46,7 @@ const AppContextProvider = ({ children }) => {
       };
       setAuthState(newState);
       localStorage.removeItem('authState');
+      localStorage.removeItem('jwtToken');
     }
     return false;
   }, []);
@@ -54,12 +55,16 @@ const AppContextProvider = ({ children }) => {
     try {
       const response = await axiosInstance.post('/login', credentials);
       if (response.status === 200) {
-        const { token } = response.data; // Assume backend returns { token: "..." }
-        localStorage.setItem('jwtToken', token); // Store JWT
-        const success = await checkAuth();
-        if (success) {
-          toast.success('Login successful');
-          return true;
+        const { token } = response.data; // Extract token from response
+        if (token) {
+          localStorage.setItem('jwtToken', token); // Store JWT
+          const success = await checkAuth();
+          if (success) {
+            toast.success('Login successful');
+            return true;
+          }
+        } else {
+          throw new Error('No token received from server');
         }
       }
     } catch (error) {
@@ -95,7 +100,7 @@ const AppContextProvider = ({ children }) => {
         isLoading: false,
       });
       localStorage.removeItem('authState');
-      localStorage.removeItem('jwtToken'); // Clear JWT
+      localStorage.removeItem('jwtToken');
       document.cookie.split(';').forEach((c) => {
         document.cookie = c
           .trim()
