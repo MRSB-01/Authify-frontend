@@ -52,28 +52,29 @@ const AppContextProvider = ({ children }) => {
   }, []);
 
   const login = useCallback(async (credentials) => {
-    try {
-      const response = await axiosInstance.post('/login', credentials);
-      if (response.status === 200) {
-        const { token } = response.data; // Extract token from response
-        if (token) {
-          localStorage.setItem('jwtToken', token); // Store JWT
-          const success = await checkAuth();
-          if (success) {
-            toast.success('Login successful');
-            return true;
-          }
-        } else {
-          throw new Error('No token received from server');
+  try {
+    const response = await axiosInstance.post('/login', credentials);
+    if (response.status === 200) {
+      const { token } = response.data; // Extract from body
+      if (token) {
+        localStorage.setItem('jwtToken', token); // Store in localStorage
+        const success = await checkAuth();
+        if (success) {
+          toast.success('Login successful');
+          return true;
         }
+      } else {
+        throw new Error('No token received from server');
       }
-    } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error.response?.data?.message || 'Login failed');
     }
-    return false;
-  }, [checkAuth]);
+  } catch (error) {
+    console.error('Login error:', error.response?.data || error.message);
+    toast.error(error.response?.data?.message || 'Login failed');
+  }
+  return false;
+}, [checkAuth]);
 
+  
   const register = useCallback(async (credentials) => {
     try {
       const response = await axiosInstance.post('/register', credentials);
