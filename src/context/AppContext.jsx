@@ -1,70 +1,121 @@
-import React, { createContext, useState, useEffect } from 'react';
-import { AppConstant } from '../utils/constants';
-import axiosInstance from '../utils/axiosInstance'; // Use your configured instance
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import axiosInstance from '../utils/axiosInstance';
 import { toast } from 'react-toastify';
 
 export const AppContext = createContext();
 
-const AppContextProvider = (props) => {
-  const backendURL = AppConstant.BACKEND_URL;
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+const AppContextProvider = ({ children }) => {
+  const [authState, setAuthState] = useState(() => {
     // Initialize from localStorage if available
-    return localStorage.getItem('isLoggedIn') === 'true';
+    const savedAuth = localStorage.getItem('authState');
+    return savedAuth 
+      ? JSON.parse(savedAuth) 
+      : { isLoggedIn: false, userData: null, isLoading: true };
   });
-  const [userData, setUserData] = useState(null);
 
-  // Check auth status on initial load
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        await getUserData();
-      } catch (error) {
-        setIsLoggedIn(false);
-        localStorage.setItem('isLoggedIn', 'false');
-      }
-    };
-    checkAuth();
-  }, []);
-
-  const getUserData = async () => {
+  // Persistent auth check with loading state
+  const checkAuth = useCallback(async () => {
     try {
-      const response = await axiosInstance.get('/me'); // Use your instance
+      setAuthState(prev => ({ ...prev, isLoading: true }));
       
-      if (response.status === 200 && response.data) {
-        setUserData(response.data);
-        setIsLoggedIn(true);
-        localStorage.setItem('isLoggedIn', 'true');
-      } else {
-        logout();
+      const response = await axiosInstance.get('/me');
+      if (response.data) {
+        const newAuthState = {
+          isLoggedIn: true,
+          userData: response.data,
+          isLoading: false
+        };
+        setAuthState(newAuthState);
+        localStorage.setItem('authState', JSON.stringify(newAuthState));
+        return true;
       }
     } catch (error) {
-      logout();
-      console.error("Error fetching user:", error);
-      if (error.response?.status !== 401) { // Don't show toast for unauthorized
-        toast.error("Error fetching user data");
+      const newAuthState = {
+        isLoggedIn: false,
+        userData: null,
+        isLoading: false
+      };
+      setAuthState(newAuthState);
+      localStorage.removeItem('authState');
+      
+      // Only show error if it's not a 401 (unauthorized)
+      if (error.response?.status !== 401) {
+        console.error("Auth check error:", error);
+        toast.error("Session verification failed");
       }
+      return false;
+    }
+  }, []);
+
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const login = async (credentials) => {
+    try {
+      await axiosInstance.post('/login', credentials);
+      const success = await checkAuth();
+      if (success) {
+        toast.success("Login successful");
+        return true;
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      toast.error(error.response?.data?.message || "Login failed");
+    }
+    return false;
+  };
+
+  const register = async (userData) => {
+    try {
+      await axiosInstance.post('/register', userData);
+      const success = await checkAuth();
+      if (success) {
+        toast.success("Registration successful");
+        return true;
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast.error(error.response?.data?.message || "Registration failed");
+    }
+    return false;
+  };
+
+  const logout = async () => {
+    try {
+      await axiosInstance.post('/logout');
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setAuthState({
+        isLoggedIn: false,
+        userData: null,
+        isLoading: false
+      });
+      localStorage.removeItem('authState');
+      
+      // Clear all cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.trim().split('=');
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      });
     }
   };
 
-  const logout = () => {
-    setUserData(null);
-    setIsLoggedIn(false);
-    localStorage.setItem('isLoggedIn', 'false');
-  };
-
   const contextValue = {
-    backendURL,
-    isLoggedIn,
-    setIsLoggedIn,
-    userData,
-    setUserData,
-    getUserData,
+    isLoggedIn: authState.isLoggedIn,
+    userData: authState.userData,
+    authLoading: authState.isLoading,
+    checkAuth,
+    login,
+    register,
     logout
   };
 
   return (
     <AppContext.Provider value={contextValue}>
-      {props.children}
+      {children}
     </AppContext.Provider>
   );
 };
