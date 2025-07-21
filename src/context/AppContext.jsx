@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { toast } from 'react-toastify';
 
@@ -6,14 +6,12 @@ export const AppContext = createContext();
 
 const AppContextProvider = ({ children }) => {
   const [authState, setAuthState] = useState(() => {
-    // Initialize from localStorage if available
     const savedAuth = localStorage.getItem('authState');
     return savedAuth 
       ? JSON.parse(savedAuth) 
       : { isLoggedIn: false, userData: null, isLoading: true };
   });
 
-  // Persistent auth check with loading state
   const checkAuth = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
@@ -29,6 +27,7 @@ const AppContextProvider = ({ children }) => {
         localStorage.setItem('authState', JSON.stringify(newAuthState));
         return true;
       }
+      return false;
     } catch (error) {
       const newAuthState = {
         isLoggedIn: false,
@@ -38,7 +37,6 @@ const AppContextProvider = ({ children }) => {
       setAuthState(newAuthState);
       localStorage.removeItem('authState');
       
-      // Only show error if it's not a 401 (unauthorized)
       if (error.response?.status !== 401) {
         console.error("Auth check error:", error);
         toast.error("Session verification failed");
@@ -47,16 +45,32 @@ const AppContextProvider = ({ children }) => {
     }
   }, []);
 
-  // Check authentication on mount
   useEffect(() => {
-    checkAuth();
+    let isMounted = true;
+    
+    const verifyAuth = async () => {
+      await checkAuth();
+      if (!isMounted) return;
+    };
+
+    verifyAuth();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [checkAuth]);
 
   const login = async (credentials) => {
     try {
-      await axiosInstance.post('/login', credentials);
-      const success = await checkAuth();
-      if (success) {
+      const response = await axiosInstance.post('/login', credentials);
+      if (response.data) {
+        const newAuthState = {
+          isLoggedIn: true,
+          userData: response.data,
+          isLoading: false
+        };
+        setAuthState(newAuthState);
+        localStorage.setItem('authState', JSON.stringify(newAuthState));
         toast.success("Login successful");
         return true;
       }
@@ -69,9 +83,8 @@ const AppContextProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      await axiosInstance.post('/register', userData);
-      const success = await checkAuth();
-      if (success) {
+      const response = await axiosInstance.post('/register', userData);
+      if (response.data) {
         toast.success("Registration successful");
         return true;
       }
@@ -88,22 +101,22 @@ const AppContextProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
+      // Clear all cookies
+      document.cookie.split(';').forEach(cookie => {
+        const [name] = cookie.split('=');
+        document.cookie = `${name.trim()}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname}`;
+      });
+      
       setAuthState({
         isLoggedIn: false,
         userData: null,
         isLoading: false
       });
       localStorage.removeItem('authState');
-      
-      // Clear all cookies
-      document.cookie.split(';').forEach(cookie => {
-        const [name] = cookie.trim().split('=');
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      });
     }
   };
 
-  const contextValue = {
+  const contextValue = useMemo(() => ({
     isLoggedIn: authState.isLoggedIn,
     userData: authState.userData,
     authLoading: authState.isLoading,
@@ -111,7 +124,7 @@ const AppContextProvider = ({ children }) => {
     login,
     register,
     logout
-  };
+  }), [authState, checkAuth]);
 
   return (
     <AppContext.Provider value={contextValue}>
