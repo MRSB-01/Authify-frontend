@@ -1,41 +1,20 @@
-import axios from "axios";
+import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: "https://authify-spring-boot-backend.onrender.com/api/v1.0",
-  withCredentials: true,
-  headers: {
-    "Content-Type": "application/json",
-    "Accept": "application/json"
-  }
+  baseURL: 'https://authify-spring-boot-backend.onrender.com/api/v1.0',
+  withCredentials: true
 });
 
-// Request interceptor for CSRF token
+// Add this interceptor
 instance.interceptors.request.use(config => {
-  const csrfToken = document.cookie
-    .split("; ")
-    .find(row => row.startsWith("XSRF-TOKEN="))
-    ?.split("=")[1];
-  
-  if (csrfToken && ["post", "put", "patch", "delete"].includes(config.method.toLowerCase())) {
-    config.headers["X-CSRF-TOKEN"] = csrfToken;
+  const token = document.cookie
+    .split('; ')
+    .find(row => row.startsWith('XSRF-TOKEN='))
+    ?.split('=')[1];
+  if (token) {
+    config.headers['X-CSRF-TOKEN'] = token;
   }
   return config;
 });
-
-// Response interceptor to handle errors
-instance.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response?.status === 401) {
-      // Clear any existing auth state
-      localStorage.removeItem("authState");
-      // Redirect to login if not already there
-      if (!window.location.pathname.includes("/login")) {
-        window.location.href = "/login";
-      }
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default instance;
